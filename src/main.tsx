@@ -16,6 +16,11 @@ createRoot(document.getElementById('root')!).render(
   </StrictMode>,
 );
 
+// Ask the browser not to evict this origin's storage under pressure. It does
+// NOT protect against the user clearing website data — only a backup file does
+// that — but it removes the automatic-eviction risk.
+navigator.storage?.persist?.().catch(() => {});
+
 if ('serviceWorker' in navigator && import.meta.env.PROD) {
   window.addEventListener('load', () => {
     navigator.serviceWorker

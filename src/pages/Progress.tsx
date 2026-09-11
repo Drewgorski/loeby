@@ -5,6 +5,7 @@ import { IconCheck } from '../components/icons';
 import Calendar from '../components/Calendar';
 import Tomorrow from '../components/Tomorrow';
 import PostureShots from '../components/PostureShots';
+import Backup from '../components/Backup';
 
 export default function Progress() {
   const state = useLiveQuery(() => readState(), []);
@@ -89,6 +90,11 @@ export default function Progress() {
         <span>Posture</span>
       </div>
       <PostureShots />
+
+      <div className="track-divider">
+        <span>Keeping it safe</span>
+      </div>
+      <Backup />
     </div>
   );
 }
