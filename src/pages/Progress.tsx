@@ -5,7 +5,6 @@ import { IconCheck } from '../components/icons';
 import Calendar from '../components/Calendar';
 import Tomorrow from '../components/Tomorrow';
 import PostureShots from '../components/PostureShots';
-import Backup from '../components/Backup';
 import CloudSync from '../components/CloudSync';
 
 export default function Progress() {
@@ -96,7 +95,6 @@ export default function Progress() {
         <span>Keeping it safe</span>
       </div>
       <CloudSync />
-      <Backup />
     </div>
   );
 }
