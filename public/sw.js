@@ -36,8 +36,13 @@ self.addEventListener('fetch', (event) => {
     event.respondWith(
       fetch(request)
         .then((res) => {
-          const copy = res.clone();
-          caches.open(VERSION).then((c) => c.put('./index.html', copy));
+          // Only cache a real shell. GitHub Pages answers deep links with a
+          // 404 status whose body is the shell, so caching blindly would
+          // enshrine an error response as the offline page.
+          if (res.ok) {
+            const copy = res.clone();
+            caches.open(VERSION).then((c) => c.put('./index.html', copy));
+          }
           return res;
         })
         .catch(() => caches.match('./index.html').then((r) => r ?? caches.match('./'))),
