@@ -9,7 +9,10 @@
  * Her data lives in IndexedDB and is never touched here — clearing this cache
  * loses nothing but the offline copy of the app itself.
  */
-const VERSION = 'loeby-v1';
+// Replaced at build time with the bundle's content hash, so every deploy gets a
+// brand-new cache and `activate` deletes the previous one. A fixed name meant
+// the offline shell kept pointing at assets that no longer exist on the server.
+const VERSION = 'loeby-__BUILD_ID__';
 
 self.addEventListener('install', (event) => {
   event.waitUntil(
@@ -29,7 +32,11 @@ self.addEventListener('activate', (event) => {
 
 self.addEventListener('fetch', (event) => {
   const { request } = event;
-  if (request.method !== 'GET' || new URL(request.url).origin !== self.location.origin) return;
+  const url = new URL(request.url);
+  if (request.method !== 'GET' || url.origin !== self.location.origin) return;
+  // Never serve the worker itself from cache — that can strand a device on an
+  // old worker forever.
+  if (url.pathname.endsWith('/sw.js')) return;
 
   // Navigations: try the network so a new deploy lands, fall back to the shell.
   if (request.mode === 'navigate') {
