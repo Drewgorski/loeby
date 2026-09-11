@@ -7,27 +7,35 @@ import {
 
 const SHORT = new Intl.DateTimeFormat(undefined, { month: 'short', day: 'numeric' });
 
-/** Object URLs must be revoked, or every re-render leaks another blob handle. */
-function useBlobUrl(blob?: Blob): string | undefined {
+/**
+ * Object URLs must be revoked, or every re-render leaks another blob handle.
+ * Falls back to the Storage URL for photos restored on a device that has the
+ * metadata but not the bytes.
+ */
+function usePhotoUrl(photo?: PosturePhoto): string | undefined {
   const [url, setUrl] = useState<string>();
+  const blob = photo?.blob;
+  const remote = photo?.url;
   useEffect(() => {
-    if (!blob) {
-      setUrl(undefined);
-      return;
+    if (blob) {
+      const u = URL.createObjectURL(blob);
+      setUrl(u);
+      return () => URL.revokeObjectURL(u);
     }
-    const u = URL.createObjectURL(blob);
-    setUrl(u);
-    return () => URL.revokeObjectURL(u);
-  }, [blob]);
+    setUrl(remote);
+  }, [blob, remote]);
   return url;
 }
 
 function Shot({ photo, alt }: { photo?: PosturePhoto; alt: string }) {
-  const url = useBlobUrl(photo?.blob);
-  if (!photo || !url) return <div className="shot empty">none yet</div>;
+  const url = usePhotoUrl(photo);
+  // A cloud photo whose bytes have gone missing should read as absent, not as a
+  // broken image icon.
+  const [failed, setFailed] = useState(false);
+  if (!photo || !url || failed) return <div className="shot empty">none yet</div>;
   return (
     <figure className="shot">
-      <img src={url} alt={alt} />
+      <img src={url} alt={alt} onError={() => setFailed(true)} />
       <figcaption>
         {SHORT.format(new Date(photo.date))} · P{photo.phase} D{photo.day}
       </figcaption>
@@ -175,6 +183,11 @@ export default function PostureShots() {
 }
 
 function StripThumb({ photo }: { photo: PosturePhoto }) {
-  const url = useBlobUrl(photo.blob);
-  return url ? <img src={url} alt="" /> : <div className="shot empty" />;
+  const url = usePhotoUrl(photo);
+  const [failed, setFailed] = useState(false);
+  return url && !failed ? (
+    <img src={url} alt="" onError={() => setFailed(true)} />
+  ) : (
+    <div className="shot empty" />
+  );
 }

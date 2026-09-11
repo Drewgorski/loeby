@@ -6,6 +6,7 @@ import Calendar from '../components/Calendar';
 import Tomorrow from '../components/Tomorrow';
 import PostureShots from '../components/PostureShots';
 import Backup from '../components/Backup';
+import CloudSync from '../components/CloudSync';
 
 export default function Progress() {
   const state = useLiveQuery(() => readState(), []);
@@ -94,6 +95,7 @@ export default function Progress() {
       <div className="track-divider">
         <span>Keeping it safe</span>
       </div>
+      <CloudSync />
       <Backup />
     </div>
   );

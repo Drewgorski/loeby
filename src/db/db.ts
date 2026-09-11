@@ -49,10 +49,35 @@ export interface PosturePhoto {
   id: string;
   date: number;
   pose: Pose;
-  blob: Blob;
+  /** Absent on a device restored from the cloud — fall back to `url`. */
+  blob?: Blob;
+  /** Storage download URL, once uploaded. */
+  url?: string;
   /** Phase and day it was taken on, so the timeline can label it. */
   phase: number;
   day: number;
+}
+
+/**
+ * A local change waiting to go up. Every synced write lands here first, so a
+ * sync only ever uploads what actually changed — pushing all of `done` on each
+ * sync would burn the free write quota within weeks.
+ */
+export interface OutboxEntry {
+  /** `${table}:${id}` — one pending entry per row, newest write wins. */
+  key: string;
+  table: string;
+  id: string;
+  op: 'put' | 'delete';
+  at: number;
+}
+
+/** Single-row sync bookkeeping. */
+export interface SyncMeta {
+  id: 'sync';
+  /** Cloud `updatedAt` high-water mark, so pulls stay incremental. */
+  lastPullAt: number;
+  lastSyncedAt?: number;
 }
 
 /** One record per day of a phase that was finished. */
@@ -81,6 +106,8 @@ const db = new Dexie('LoebyDB') as Dexie & {
   dayLogs: EntityTable<DayLog, 'id'>;
   journal: EntityTable<JournalEntry, 'date'>;
   photos: EntityTable<PosturePhoto, 'id'>;
+  outbox: EntityTable<OutboxEntry, 'key'>;
+  syncMeta: EntityTable<SyncMeta, 'id'>;
 };
 
 db.version(1).stores({
@@ -127,12 +154,79 @@ db.version(5).stores({
   photos: 'id, date, pose',
 });
 
+// v7 adds cloud sync bookkeeping, and a url on photos so a restored device can
+// show a shot whose blob only exists in Storage.
+db.version(7).stores({
+  checkins: 'date',
+  progress: 'id',
+  done: 'id, date',
+  dayLogs: 'id, phase',
+  journal: 'date',
+  photos: 'id, date, pose',
+  outbox: 'key, at',
+  syncMeta: 'id',
+});
+
 // NOTE: the 'side' pose became 'left' + 'right' during development. That was a
 // change of stored VALUES, not of schema, so it needs no version bump — and no
 // build ever shipped with 'side' photos in it. Deliberately no migration: an
 // untested upgrade that touches photos can only lose them.
 
 export { db };
+
+/** Tables that go to the cloud. `outbox`/`syncMeta` are local bookkeeping. */
+export const SYNCED_TABLES = ['checkins', 'progress', 'done', 'dayLogs', 'journal', 'photos'] as const;
+
+/** Primary key field per synced table, for building outbox entries. */
+const PK: Record<string, string> = {
+  checkins: 'date',
+  progress: 'id',
+  done: 'id',
+  dayLogs: 'id',
+  journal: 'date',
+  photos: 'id',
+};
+
+/**
+ * Suppresses outbox writes while sync is applying cloud data locally — without
+ * it, every pulled row would immediately queue itself to be pushed straight
+ * back up, and two devices would ping-pong forever.
+ */
+let applyingRemote = false;
+export function withRemoteApply<T>(fn: () => Promise<T>): Promise<T> {
+  applyingRemote = true;
+  return fn().finally(() => {
+    applyingRemote = false;
+  });
+}
+
+function queue(table: string, id: unknown, op: 'put' | 'delete') {
+  if (applyingRemote || id == null) return;
+  const key = `${table}:${id}`;
+  // ignoreTransaction is required, not cosmetic: hooks run inside the caller's
+  // transaction, which is scoped to its own table, so writing to `outbox` from
+  // there throws "not part of transaction" and the change never syncs.
+  Dexie.ignoreTransaction(() =>
+    db.outbox
+      .put({ key, table, id: String(id), op, at: Date.now() })
+      .catch((e) => console.error('[sync] could not queue', key, e)),
+  );
+}
+
+// Hook every synced table so callers never have to remember to enqueue.
+for (const name of SYNCED_TABLES) {
+  const table = db.table(name);
+  const pk = PK[name];
+  table.hook('creating', (key, obj) => {
+    queue(name, key ?? (obj as Record<string, unknown>)[pk], 'put');
+  });
+  table.hook('updating', (_mods, key) => {
+    queue(name, key, 'put');
+  });
+  table.hook('deleting', (key) => {
+    queue(name, key, 'delete');
+  });
+}
 
 export function startOfDay(ts = Date.now()): number {
   const d = new Date(ts);
@@ -340,8 +434,13 @@ export async function exportAll(): Promise<Backup> {
     done,
     dayLogs,
     journal,
+    // A photo synced from the cloud may have no local bytes; export what we
+    // have rather than failing the whole backup on it.
     photos: await Promise.all(
-      photos.map(async ({ blob, ...rest }) => ({ ...rest, dataUrl: await blobToDataUrl(blob) })),
+      photos.map(async ({ blob, ...rest }) => ({
+        ...rest,
+        dataUrl: blob ? await blobToDataUrl(blob) : '',
+      })),
     ),
   };
 }
@@ -358,7 +457,7 @@ export async function importAll(data: unknown): Promise<{ restored: number }> {
   const photos: PosturePhoto[] = await Promise.all(
     (b.photos ?? []).map(async ({ dataUrl, ...rest }) => ({
       ...rest,
-      blob: await fetch(dataUrl).then((r) => r.blob()),
+      blob: dataUrl ? await fetch(dataUrl).then((r) => r.blob()) : undefined,
     })),
   );
 
