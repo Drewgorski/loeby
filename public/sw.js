@@ -24,7 +24,12 @@ self.addEventListener('install', (event) => {
 self.addEventListener('activate', (event) => {
   event.waitUntil(
     caches.keys().then((keys) =>
-      Promise.all(keys.filter((k) => k !== VERSION).map((k) => caches.delete(k))),
+      // Only ever clear this app's own old caches. Project Loeby lives on the
+      // same origin (drewgorski.github.io), and CacheStorage is per origin, not
+      // per scope, so an unprefixed sweep would delete the other app's cache.
+      Promise.all(
+        keys.filter((k) => k.startsWith('loeby-') && k !== VERSION).map((k) => caches.delete(k)),
+      ),
     ),
   );
   self.clients.claim();
