@@ -593,7 +593,7 @@ export const PHASES: Phase[] = [
           {
             id: 'suitcase-carry',
             name: 'Suitcase carry',
-            dose: '3 × 30m, one side at a time',
+            dose: '3 × 40 steps per side',
             cue: 'Weight in one hand, walk tall, do not let your ribs shift or your body lean away from it. Breathe out.',
             why: 'Your obliques have to hold the ribcage over the pelvis while you walk. This is the stacked position you have been drilling on the floor, now under load and on your feet.',
             video: V.suitcaseCarry,
@@ -649,7 +649,7 @@ export const PHASES: Phase[] = [
           {
             id: 'suitcase-carry',
             name: 'Suitcase carry',
-            dose: '3 × 30m, one side at a time',
+            dose: '3 × 40 steps per side',
             cue: 'Weight in one hand, walk tall, do not let your ribs shift or your body lean away from it. Breathe out.',
             why: 'Your obliques have to hold the ribcage over the pelvis while you walk. This is the stacked position you have been drilling on the floor, now under load and on your feet.',
             video: V.suitcaseCarry,
@@ -677,8 +677,8 @@ export const PHASES: Phase[] = [
       {
         title: 'Speed',
         movements: [
-          { id: 'accels', name: 'Acceleration runs', dose: '6 × 20m, full recovery', cue: 'Build to full effort over weeks, not days.', why: 'Acceleration is the safest way back to speed — high force, short range. The hamstring’s danger zone is top speed, so we build the engine before opening it up.', video: V.accels },
-          { id: 'max-v', name: 'Max velocity exposure', dose: '4 × 30m flys', cue: 'Full recovery between reps. Quality only — stop when speed drops.', why: 'This is the exposure the hamstring actually needs. A muscle that has never been to top speed cannot be trusted at top speed.', video: V.maxV },
+          { id: 'accels', name: 'Acceleration runs', dose: '6 × 20 meters, full recovery', cue: 'Build to full effort over weeks, not days.', why: 'Acceleration is the safest way back to speed — high force, short range. The hamstring’s danger zone is top speed, so we build the engine before opening it up.', video: V.accels },
+          { id: 'max-v', name: 'Max velocity exposure', dose: '4 × 30 meter flys', cue: 'Full recovery between reps. Quality only — stop when speed drops.', why: 'This is the exposure the hamstring actually needs. A muscle that has never been to top speed cannot be trusted at top speed.', video: V.maxV },
           { id: 'cod', name: 'Change of direction', dose: 'Progressive', cue: 'Cuts and decelerations before returning to a match.', why: 'Soccer is not run in a straight line. Decelerating and cutting is the last thing to rebuild, and it is what the game will ask for in the first minute.', video: V.cutting },
         ],
       },
@@ -688,7 +688,7 @@ export const PHASES: Phase[] = [
           {
             id: 'a-skip',
             name: 'A-skips & wall drills',
-            dose: '3 × 20m before every sprint session',
+            dose: '3 × 20 meters before every sprint',
             cue: 'Tall through the hips, ribs down, knee up and foot striking underneath you rather than out in front.',
             why: 'This is posture training disguised as a warm-up. You cannot sprint well with a tipped pelvis and quiet glutes, which is why sprinting ends up teaching your body the position faster than any floor drill.',
             video: V.aSkip,
